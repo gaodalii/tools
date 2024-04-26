@@ -4,7 +4,7 @@
 
 # docker build --progress plain --network=host -f Dockerfile.transformer -t registry.light-field.tech/citygen/hflibs:test .
 #--build-arg http_proxy=http://127.0.0.1:11000 --build-arg https_proxy=http://127.0.0.1:11000 
-# docker run -it --privileged --name hflibs  --rm --gpus all --ipc=host --network=host -e HF_HOME=/workspace/hf_home -v $PWD:/workspace -v /city_gen:/city_gen registry.light-field.tech/citygen/transformer:test
+# docker run -it --privileged --name hflibs  --rm --gpus all --ipc=host --network=host -e HF_HOME=/workspace/hf_home -v $PWD:/workspace -v /city_gen:/city_gen registry.light-field.tech/citygen/hflibs:test
 
 FROM nvcr.io/nvidia/cuda:12.1.1-devel-ubuntu22.04
 

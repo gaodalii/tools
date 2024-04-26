@@ -1,0 +1,46 @@
+# docker build --progress plain --network=host -f Dockerfile.hfd -t registry.light-field.tech/citygen/hfd:test .
+#--build-arg http_proxy=http://127.0.0.1:11000 --build-arg https_proxy=http://127.0.0.1:11000 
+# docker run -it --privileged --name hfd  --rm --gpus all --ipc=host --network=host -e HF_HOME=/workspace/hf_home -v $PWD:/workspace -v /city_gen:/city_gen registry.light-field.tech/citygen/hfd:test
+# cd /workspace && ./hfd.sh sudo-ai/zero123plus-v1.1 --local-dir /city_gen/HuggingFace/sudo-ai/zero123plus-v1.1
+FROM ubuntu:22.04
+
+ENV TZ=Asia/Shanghai
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ 
+
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    apt-get update && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update
+
+RUN apt-get purge -y --auto-remove python3 && \
+    apt-get install -y python3.10 python3.10-dev python3.10-distutils wget curl git && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+
+# pip
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py && \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip && \
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip config set global.extra-index-url https://mirrors.bfsu.edu.cn/pypi/web/simple
+
+RUN apt-get update && \
+    apt-get install -y  openssh-server
+
+RUN mkdir /var/run/sshd && \
+    echo 'root:root' | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+WORKDIR /workspace
+
+RUN apt-get update && \
+    apt-get install -y aria2 curl && \
+    curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+    apt-get install -y  git-lfs && \
+    wget https://hf-mirror.com/hfd/hfd.sh && \
+    chmod a+x hfd.sh
+
+# EXPOSE 22
+
+# CMD ["/usr/sbin/sshd", "-D"]
