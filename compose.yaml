@@ -1,0 +1,85 @@
+# BUILDKIT_PROGRESS=plain 
+# docker compose -p tools
+# docker compose up --build  hflibs
+services:
+  rembg :    
+    image: registry.light-field.tech/citygen/rembg:test   
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN                                           
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0'] # ['1', '3'] 
+            capabilities: [gpu]           
+    environment:
+      # - HF_HOME=/workspace/hf_home
+      # - HF_ENDPOINT=https://hf-mirror.com
+      - http_proxy=http://127.0.0.1:11000 
+      - https_proxy=http://127.0.0.1:11000          
+      - no_proxy=localhost,127.0.0.1,::1
+    init: true
+    ipc: "host"
+    network_mode: host
+    # ports:
+    #   - "7000:7000" 
+    runtime: nvidia      
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864            
+    volumes:
+      - /etc/localtime:/etc/localtime:ro      
+      - /city_gen:/city_gen            
+      - rembg_models:/root/.u2net/      
+    command: ["rembg", "s", "--host", "0.0.0.0", "--port", "7000", "--log_level", "info"]      
+
+  hflibs:        
+    image: registry.light-field.tech/citygen/hflibs:test  
+    build:
+      context: ./
+      dockerfile: Dockerfile.hflibs       
+      # args:
+        # http_proxy: http://127.0.0.1:11000 
+        # https_proxy: http://127.0.0.1:11000          
+      network: host            
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN                                           
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0'] # ['1', '3'] 
+            capabilities: [gpu]           
+    environment:
+      - HF_HOME=/hf_home
+      - HF_ENDPOINT=https://hf-mirror.com
+      # - http_proxy=http://127.0.0.1:11000 
+      # - https_proxy=http://127.0.0.1:11000       
+      # - no_proxy=localhost,127.0.0.1,::1   
+    init: true
+    ipc: "host"
+    network_mode: host
+    runtime: nvidia      
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864            
+    volumes:
+      # - ./:/workspace      
+      - hflibs_models:/hf_home    
+    command: ["/usr/sbin/sshd", "-D", "-p", "8024"]   
+
+volumes:
+  rembg_models:     
+  hflibs_models:  

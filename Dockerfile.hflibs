@@ -1,0 +1,68 @@
+# https://huggingface.co/docs/transformers/installation
+# https://huggingface.co/docs/diffusers/en/installation#installation
+# https://github.com/huggingface/transformers?tab=readme-ov-file#installation
+
+# docker build --progress plain --network=host -f Dockerfile.transformer -t registry.light-field.tech/citygen/hflibs:test .
+#--build-arg http_proxy=http://127.0.0.1:11000 --build-arg https_proxy=http://127.0.0.1:11000 
+# docker run -it --privileged --name hflibs  --rm --gpus all --ipc=host --network=host -e HF_HOME=/workspace/hf_home -v $PWD:/workspace -v /city_gen:/city_gen registry.light-field.tech/citygen/transformer:test
+
+FROM nvcr.io/nvidia/cuda:12.1.1-devel-ubuntu22.04
+
+ENV NVIDIA_DRIVER_CAPABILITIES video,compute,utility
+
+# python
+ENV TZ=Asia/Shanghai
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ 
+
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    apt-get update && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update
+
+RUN apt-get purge -y --auto-remove python3 && \
+    apt-get install -y python3.10 python3.10-dev python3.10-distutils wget && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+
+# pip
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py && \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip && \
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip config set global.extra-index-url https://mirrors.bfsu.edu.cn/pypi/web/simple
+
+# pytorch
+RUN pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu121
+
+RUN apt-get update && apt-get install -y build-essential git wget htop 
+# RUN apt-get update && apt-get -y install libgl1 libglib2.0-0
+
+RUN pip install ninja    
+
+WORKDIR /tmp
+
+# ENV TORCH_CUDA_ARCH_LIST = "6.0 6.1 7.2+PTX 7.5+PTX"
+
+RUN git clone --recurse-submodules https://github.com/facebookresearch/xformers.git && \
+    cd xformers && \
+    pip install -e .
+
+RUN git clone https://github.com/huggingface/transformers.git && \
+    cd transformers && \
+    pip install -e .
+
+RUN git clone https://github.com/huggingface/diffusers.git && \
+    cd diffusers && \
+    pip install -e ".[torch]"
+
+RUN apt-get update && \
+    apt-get install -y  openssh-server
+
+RUN mkdir /var/run/sshd && \
+    echo 'root:root' | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# EXPOSE 22
+
+# CMD ["/usr/sbin/sshd", "-D"]
